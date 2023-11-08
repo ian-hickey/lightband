@@ -2,7 +2,9 @@ import serial
 import time
 import pygame
 import numpy as np
-from pygame.sndarray import array
+import simpleaudio as sa
+import threading
+import os
 
 COM_PORT  = 'COM3'
 BAUD_RATE = 115200
@@ -101,6 +103,30 @@ def play_song():
      while pygame.mixer.music.get_busy(): 
         audio = pygame.mixer.music.get_buffer()
         light_leds(audio)
+
+def analyze_stream():
+    print("Starting audio analysis")
+    try:
+        while True:
+            # Read audio stream
+            data = stream.read(CHUNK, exception_on_overflow=False)
+            # Convert audio data to integers
+            audio_data = np.frombuffer(data, dtype=np.int16)
+            # Apply FFT and take only the positive frequencies
+            fft_data = np.fft.rfft(audio_data)
+            # Process and light LEDs
+            light_leds(fft_data)
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("Stopping audio analysis")
+
+    # Stop and close the stream
+    stream.stop_stream()
+    stream.close()
+    # Terminate the PyAudio object
+    p.terminate()
+    # Close serial port
+    arduino.close()
 
 if __name__ == "__main__":
     main()
