@@ -72,19 +72,17 @@ def light_leds(frequency_data):
         else:
             color = '0000FF'  # Blue
         if ( i == 0 ):
-            led_commands.append(f'light {i} {color} {brightness} {int(b)};')
-            break
-        else: 
-            led_commands.append(f'{i} {color} {brightness} {int(b)};')
+            led_commands.append(f'light 2 FFFFFF 250 250;')
+            
 
     # Send to Arduino
-    #send_command(''.join(led_commands))
-    send_command('light 1 FF0000 1000 255')
+    send_command(''.join(led_commands) + "\n")
+    
 
 def send_command(command):
     print(f"Send command called {command}")
     arduino.write(command.encode())
-    time.sleep(0.5)  # Give Arduino time to respond
+    time.sleep(0.05)  # Give Arduino time to respond
 
     # Wait for response from Arduino
     data = arduino.readline()
