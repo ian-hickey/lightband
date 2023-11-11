@@ -1,6 +1,5 @@
 import serial
 import time
-import pygame
 import numpy as np
 import simpleaudio as sa
 import threading
@@ -9,12 +8,7 @@ import pyaudio
 import colorsys
 from rpi_ws281x import PixelStrip, Color
 import time
-import serial
 
-# Constants for serial
-COM_PORT  = 'COM3'
-BAUD_RATE = 115200
-TIMEOUT = 100
 
 # Constants for PyAudio
 FORMAT = pyaudio.paInt16
@@ -22,13 +16,24 @@ CHANNELS = 1
 RATE = 44100
 CHUNK = 1024  # Number of audio samples per frame
 
-# Constants for LED mapping
-LED_COUNT = 50
-
+# LED strip configuration
+NUM_LEDS = 50       # We have 1000, but one strip for testing 
+NUM_BANDS = 3       # Number of bands (e.g., bass, mids, highs)
+LEDS_PER_BAND = 16  # Closest to 50 evenly.
 
 # Path to the audio file
 AUDIO_FILE = 'alliwantforchristmasisyou.wav'
 
+# Initialize PyAudio
+p = pyaudio.PyAudio()
+
+# Open stream for audio input
+stream = p.open(format=FORMAT,
+                channels=CHANNELS,
+                rate=RATE,
+                output=True,                # Set to True for playback
+                output_device_index=2,      # Set the device index for headphones
+                frames_per_buffer=CHUNK)
 
 def frequency_to_color(frequency_index, num_frequencies, brightness):
     # Map the frequency index to a hue between 0 and 270 degrees (you can adjust this range as needed)
@@ -47,23 +52,12 @@ def play_audio(audio_path):
     play_obj = wave_obj.play()
 
 
-# Initialize PyAudio
-p = pyaudio.PyAudio()
-
-# Open stream for audio input
-stream = p.open(format=FORMAT,
-                channels=CHANNELS,
-                rate=RATE,
-                input=True,
-                frames_per_buffer=CHUNK)
-
 # Replace 'COM3' with the serial port your Arduino is connected to.
-arduino = serial.Serial(port=COM_PORT, baudrate=BAUD_RATE, timeout=TIMEOUT)
+#arduino = serial.Serial(port=COM_PORT, baudrate=BAUD_RATE, timeout=TIMEOUT)
 
 def main():
     while True:
         # Example commands to control the lights.
-        # These need to match with the code on the Arduino.
         # To set a light manually, use `light <index> <color> <duration> <brightness>`
         # To light many lights at once, send `light <index> <color> <duration> <brightness>;<index> <color> <duration> <brightness>;...;<index> <color> <duration> <brightness>`
 
@@ -75,13 +69,6 @@ def main():
             send_command(cmd)
         if cmd == "off":
             break
-
-        # Wait for response from Arduino
-        data = arduino.readline()
-        if data:
-            print(data.decode(), end="")  # Print response from Arduino
-
-    arduino.close()
 
 def light_leds(frequency_data):
     print(f"Lighting LEDS")
@@ -114,15 +101,7 @@ def light_leds(frequency_data):
     send_command(''.join(led_commands))
     
 def send_command(command):
-    arduino.write(bytes(command, 'utf-8'))
-    time.sleep(0.5)  # Give Arduino time to respond
-    if command == "off":
-            arduino.close()
-
-    # Wait for response from Arduino
-    data = arduino.readline()
-    if data:
-        print(data.decode('utf-8', errors='replace'), end="")
+    print(f"Command: {command}")
 
 def play_song():
      print("Playing song")
@@ -154,8 +133,7 @@ def analyze_stream():
     stream.close()
     # Terminate the PyAudio object
     p.terminate()
-    # Close serial port
-    arduino.close()
+ 
 
 
 def get_frequency_magnitude(fft_data, freq_range, sample_rate, chunk_size):
@@ -186,7 +164,6 @@ def display_band_on_led(strip, led_start, led_end, magnitude):
         strip.setPixelColor(i, Color(0, 255, 0))  # Example: Green color
 
     strip.show()
-
 
 
 if __name__ == "__main__":
