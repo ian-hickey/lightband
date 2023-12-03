@@ -4,14 +4,17 @@ import numpy as np
 import simpleaudio as sa
 import threading
 import os
-import pyaudio
+import sounddevice as sd
 import colorsys
 from rpi_ws281x import PixelStrip, Color
 import time
 
 
-# Constants for PyAudio
-FORMAT = pyaudio.paInt16
+# Play your audio file
+wave_obj = sa.WaveObject.from_wave_file('alliwantforchristmasisyou.wav')
+play_obj = wave_obj.play()
+play_obj.wait_done()
+
 CHANNELS = 1
 RATE = 44100
 CHUNK = 1024  # Number of audio samples per frame
@@ -24,16 +27,6 @@ LEDS_PER_BAND = 16  # Closest to 50 evenly.
 # Path to the audio file
 AUDIO_FILE = 'alliwantforchristmasisyou.wav'
 
-# Initialize PyAudio
-p = pyaudio.PyAudio()
-
-# Open stream for audio input
-stream = p.open(format=FORMAT,
-                channels=CHANNELS,
-                rate=RATE,
-                output=True,                # Set to True for playback
-                output_device_index=2,      # Set the device index for headphones
-                frames_per_buffer=CHUNK)
 
 def frequency_to_color(frequency_index, num_frequencies, brightness):
     # Map the frequency index to a hue between 0 and 270 degrees (you can adjust this range as needed)
@@ -51,10 +44,20 @@ def play_audio(audio_path):
     wave_obj = sa.WaveObject.from_wave_file(audio_path)
     play_obj = wave_obj.play()
 
+def audio_callback(indata, frames, time, status):
+    # This function will be called by sounddevice for each audio block
 
-# Replace 'COM3' with the serial port your Arduino is connected to.
-#arduino = serial.Serial(port=COM_PORT, baudrate=BAUD_RATE, timeout=TIMEOUT)
-
+    # Convert the input audio data to an numpy array for FFT
+    audio_data = np.frombuffer(indata, dtype=np.float32)
+    
+    # Perform FFT on the audio data
+    fft_result = np.fft.fft(audio_data)
+    
+    # Process the FFT result to control the LED strip
+    # For example, you might want to take the magnitude of the FFT result
+    # to determine how to light the LEDs
+    light_leds(fft_result)
+    
 def main():
     while True:
         # Example commands to control the lights.
@@ -108,7 +111,10 @@ def play_song():
      # Thread to play audio
      audio_thread = threading.Thread(target=play_audio, args=(AUDIO_FILE,))
      audio_thread.start()
-     analyze_stream()
+     #with sd.InputStream(callback=audio_callback):
+        # Just keep the main thread alive while audio processing is done in the callback
+     #   while True:
+     #       time.sleep(0.1)
 
 def analyze_stream():
     print("Starting audio analysis")

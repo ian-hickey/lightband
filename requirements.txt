@@ -1,9 +1,3 @@
 pyserial
-pyaudio
-numpy
-python-vlc
-sounddevice 
-scipy
-simpleaudio
 rpi_ws281x
 
